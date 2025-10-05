@@ -7,7 +7,8 @@
   <style>
     :root{
       --bg:#f7f7f9; --card:#ffffff; --muted:#666; --accent:#0b5fff;
-      --danger:#ff6b6b; --border:#d0d0d5; --cab-white:#ffffff; --cab-red:#ffecec;
+      --warning:#ffdddd; --danger:#ff6b6b; --green:#2ecc71; --border:#e0e0e5;
+      --cab-white:#ffffff; --cab-red:#ffecec;
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
     body{margin:0;background:var(--bg);color:#111}
@@ -20,18 +21,22 @@
     input[type=number]{width:84px;padding:6px;border:1px solid var(--border);border-radius:6px}
     button{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
     button.reset{background:#ff6b6b}
-    button.apply{background:#007d3a}
+    button.apply{background:var(--green)}
     table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(20,30,80,0.06)}
-    th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:center;font-size:13px;border-right:1px solid var(--border)}
+    th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:center;font-size:13px}
     thead th{background:#fbfdff;position:sticky;top:0;z-index:2}
-    .cab-row td:first-child, .cab-row th:first-child{position:sticky;left:0;background:#f9fafb;z-index:3;border-right:2px solid var(--border)}
+    .cab-row td:first-child{position:sticky;left:0;background:#fff;z-index:3;border-right:1px solid var(--border)}
     .cab-name{font-weight:600}
-    .teacher-input{width:120px;padding:6px;border:1px solid var(--border);border-radius:6px}
+    .teacher-input{width:120px;padding:6px;border:1px solid var(--border);border-radius:6px;transition:0.2s}
+    .teacher-input.is-lt{border:2px solid var(--green)!important;background:#f6fff8}
+    .lt-check{margin-left:4px;width:16px;height:16px;cursor:pointer;vertical-align:middle}
     .timer{min-width:64px;padding:6px;border-radius:6px}
     .cab-white{background:var(--cab-white)}
-    .cab-red{background:var(--cab-red)}
+    .cab-red{background:#fff0f0}
     .ending{background:var(--danger)!important;color:#fff}
-    .divider-row td{border-top:3px solid #000;background:#f0f0f0;font-weight:600;text-align:left;padding:4px 10px;}
+    tr.divider td{background:#f0f0f0;height:4px;border:0}
+    td,th{border-right:1px solid var(--border)}
+    tr td:last-child, tr th:last-child{border-right:none}
     @media (max-width:900px){
       .teacher-input{width:90px}
       th,td{padding:6px;font-size:12px}
@@ -47,11 +52,13 @@
 
   <div class="container">
     <div class="controls">
-      <label>Thời lượng ca (phút): <input id="shiftDuration" type="number" value="120" min="1"></label>
+      <label>Thời lượng ca (phút): <input id="shiftDuration" type="number" value="150" min="1"></label>
       <label>Cảnh báo khi còn (phút): <input id="warnMinutes" type="number" value="10" min="0"></label>
       <button id="applyBtn" class="apply">Áp dụng</button>
       <button id="resetBtn" class="reset">Reset toàn bộ</button>
-      <div style="margin-left:auto;color:var(--muted);font-size:13px">11 CABIN trắng — 2 CABIN đỏ • Các ca: 08:00,10:00,12:00,14:00,18:00</div>
+      <div style="margin-left:auto;color:var(--muted);font-size:13px">
+        11 CABIN trắng — 2 CABIN đỏ • Các ca: 08:00,10:00,12:00,14:00,18:00
+      </div>
     </div>
 
     <div style="overflow:auto">
@@ -77,137 +84,158 @@
     const table = document.getElementById('cabTable');
     const tbody = table.querySelector('tbody');
     const theadRow = table.querySelector('thead tr');
+
     const shiftDurationInput = document.getElementById('shiftDuration');
     const warnMinutesInput = document.getElementById('warnMinutes');
-    const applyBtn = document.getElementById('applyBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const applyBtn = document.getElementById('applyBtn');
 
-    // Load cache
-    const cached = JSON.parse(localStorage.getItem('cabinState')||'{}');
-    const cachedConfig = JSON.parse(localStorage.getItem('cabinConfig')||'{}');
-    if(cachedConfig.shiftDuration) shiftDurationInput.value = cachedConfig.shiftDuration;
-    if(cachedConfig.warnMinutes) warnMinutesInput.value = cachedConfig.warnMinutes;
-
-    // Header rendering
     shifts.forEach(shift=>{
-      const th = document.createElement('th');
-      th.colSpan = 2;
-      th.innerHTML = `<div style="font-weight:700">${shift}</div><div style="font-size:12px;color:var(--muted)">Giáo viên / Thời gian</div>`;
+      const th=document.createElement('th');
+      th.colSpan=3;
+      th.innerHTML=`<div style="font-weight:700">${shift}</div><div style="font-size:12px;color:var(--muted)">Giáo viên / LT / Thời gian</div>`;
       theadRow.appendChild(th);
     });
 
-    function makeRow(c,i){
-      const tr = document.createElement('tr');
-      tr.className = 'cab-row';
-      const firstTd = document.createElement('td');
-      firstTd.innerHTML = `<div class="cab-name">${c.name}</div><div style="font-size:12px;color:var(--muted)">${c.color==='red'? 'CABIN đỏ':'CABIN trắng'}</div>`;
-      firstTd.style.minWidth='140px';
-      tr.appendChild(firstTd);
+    cabins.forEach((c,i)=>{
+      const tr=document.createElement('tr');
+      tr.className='cab-row';
+      const tdCab=document.createElement('td');
+      tdCab.innerHTML=`<div class="cab-name">${c.name}</div><div style="font-size:12px;color:var(--muted)">${c.color==='red'?'CABIN đỏ':'CABIN trắng'}</div>`;
+      tdCab.style.minWidth='140px';
+      tr.appendChild(tdCab);
 
       shifts.forEach((shift,j)=>{
-        const tdTeacher = document.createElement('td');
-        const input = document.createElement('input');
-        input.className='teacher-input'; input.placeholder='Nhập tên giáo viên'; input.dataset.key=`${i}-${j}`;
+        const key=`${i}-${j}`;
+
+        const tdTeacher=document.createElement('td');
+        tdTeacher.style.width='170px';
+        const input=document.createElement('input');
+        input.className='teacher-input';
+        input.placeholder='Tên giáo viên';
+        input.dataset.key=key;
+
+        const ltBox=document.createElement('input');
+        ltBox.type='checkbox';
+        ltBox.className='lt-check';
+        ltBox.title='LT';
+
         tdTeacher.appendChild(input);
+        tdTeacher.appendChild(ltBox);
         tr.appendChild(tdTeacher);
 
-        const tdTimer = document.createElement('td');
+        const tdTimer=document.createElement('td');
         tdTimer.className='timer '+(c.color==='red'?'cab-red':'cab-white');
-        tdTimer.dataset.key=`${i}-${j}`;
+        tdTimer.dataset.key=key;
         tdTimer.textContent='00:00:00';
         tr.appendChild(tdTimer);
 
-        state[`${i}-${j}`] = {start:null, running:false, intervalId:null};
+        state[key]={start:null,intervalId:null,running:false};
 
-        input.addEventListener('input', e=>{
-          const key = e.target.dataset.key;
-          if(e.target.value.trim()!=='') startTimer(key); else resetCell(key);
-          saveCache();
+        input.addEventListener('input',e=>{
+          const key=e.target.dataset.key;
+          if(e.target.value.trim()!=='') startTimer(key);
+          else resetCell(key);
+          saveState();
+        });
+
+        ltBox.addEventListener('change',e=>{
+          if(e.target.checked) input.classList.add('is-lt');
+          else input.classList.remove('is-lt');
+          saveState();
         });
       });
-      return tr;
-    }
 
-    cabins.forEach((c,i)=>{
-      if(i===11){ // separator before red cabins
-        const divRow=document.createElement('tr');
-        divRow.className='divider-row';
-        const td=document.createElement('td');
-        td.colSpan=shifts.length*2+1;
-        td.textContent='CABIN ĐỎ';
-        divRow.appendChild(td);
-        tbody.appendChild(divRow);
+      tbody.appendChild(tr);
+
+      if(i===10){ // sau cabin 11
+        const divider=document.createElement('tr');
+        divider.className='divider';
+        divider.innerHTML=`<td colspan="${1+shifts.length*3}"></td>`;
+        tbody.appendChild(divider);
       }
-      tbody.appendChild(makeRow(c,i));
     });
 
-    // Restore cache if any
-    if(cached){
-      Object.keys(cached).forEach(k=>{
-        const data=cached[k];
-        const input=document.querySelector(`input[data-key='${k}']`);
-        const timer=document.querySelector(`td.timer[data-key='${k}']`);
-        if(input && data.teacher) input.value=data.teacher;
-        if(data.start && data.running){
-          state[k].start=data.start; state[k].running=data.running;
-          startTimer(k,true);
-        }
-        if(timer && data.time) timer.textContent=data.time;
-      });
-    }
-
+    const clockEl=document.getElementById('clock');
     function updateClock(){
       const now=new Date();
-      document.getElementById('clock').textContent=now.toLocaleString('vi-VN',{weekday:'long',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      clockEl.textContent=now.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'2-digit',day:'2-digit'})+
+      ' — '+now.toLocaleTimeString('vi-VN');
     }
-    updateClock(); setInterval(updateClock,1000);
+    setInterval(updateClock,1000);updateClock();
 
-    function formatHMS(seconds){const h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60),s=Math.floor(seconds%60);return[h,m,s].map(v=>String(v).padStart(2,'0')).join(':');}
+    function formatHMS(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.floor(s%60);return[h,m,ss].map(v=>String(v).padStart(2,'0')).join(':');}
 
-    function startTimer(key,resume=false){
-      const entry=state[key]; if(!entry) return;
-      if(!resume && entry.running) return;
-      if(!resume) entry.start=Date.now(); entry.running=true;
-      const dur=parseInt(shiftDurationInput.value,10)||120; const warn=parseInt(warnMinutesInput.value,10)||10;
-      const durSec=dur*60, warnSec=warn*60;
-      clearInterval(entry.intervalId);
+    function startTimer(key){
+      const entry=state[key];if(!entry||entry.running)return;
+      entry.start=Date.now();entry.running=true;
+      const durSec=(parseInt(shiftDurationInput.value)||150)*60;
+      const warnSec=(parseInt(warnMinutesInput.value)||10)*60;
+
       const tick=()=>{
         const elapsed=Math.floor((Date.now()-entry.start)/1000);
-        const remain=Math.max(0,durSec-elapsed);
+        const remaining=Math.max(0,durSec-elapsed);
         const el=document.querySelector(`td.timer[data-key='${key}']`);
-        if(el){el.textContent=formatHMS(elapsed); el.classList.toggle('ending',remain<=warnSec);}
-        if(remain<=0){clearInterval(entry.intervalId); entry.running=false;}
-        saveCache();
+        if(el){
+          el.textContent=formatHMS(elapsed);
+          if(remaining<=warnSec) el.classList.add('ending'); else el.classList.remove('ending');
+        }
+        if(elapsed>=durSec){clearInterval(entry.intervalId);entry.intervalId=null;entry.running=false;}
       };
-      tick(); entry.intervalId=setInterval(tick,1000);
+      tick();
+      entry.intervalId=setInterval(tick,1000);
+      saveState();
     }
 
     function resetCell(key){
-      const e=state[key]; if(!e) return; clearInterval(e.intervalId); e.start=null; e.running=false;
-      const el=document.querySelector(`td.timer[data-key='${key}']`); if(el){el.textContent='00:00:00'; el.classList.remove('ending');}
-      const inp=document.querySelector(`input[data-key='${key}']`); if(inp) inp.value='';
-      saveCache();
+      const e=state[key];if(!e)return;
+      if(e.intervalId){clearInterval(e.intervalId);e.intervalId=null;}
+      e.start=null;e.running=false;
+      const el=document.querySelector(`td.timer[data-key='${key}']`);
+      if(el){el.textContent='00:00:00';el.classList.remove('ending');}
     }
 
     resetBtn.addEventListener('click',()=>{
-      Object.keys(state).forEach(k=>resetCell(k)); localStorage.clear();
+      document.querySelectorAll('.teacher-input').forEach(i=>i.value='');
+      document.querySelectorAll('.lt-check').forEach(c=>c.checked=false);
+      Object.keys(state).forEach(k=>resetCell(k));
+      document.querySelectorAll('.teacher-input').forEach(i=>i.classList.remove('is-lt'));
+      localStorage.removeItem('cabinState');
     });
 
     applyBtn.addEventListener('click',()=>{
-      saveConfig(); Object.keys(state).forEach(k=>{if(state[k].running) startTimer(k,true);});
+      saveState();
+      alert('Đã áp dụng thời lượng ca và cảnh báo cho các bộ đếm.');
     });
 
-    function saveCache(){
-      const obj={}; Object.keys(state).forEach(k=>{
-        const inp=document.querySelector(`input[data-key='${k}']`);
-        const timer=document.querySelector(`td.timer[data-key='${k}']`);
-        obj[k]={teacher:inp?inp.value:'',start:state[k].start,running:state[k].running,time:timer?timer.textContent:''};
+    function saveState(){
+      const saveData={shiftDuration:shiftDurationInput.value,warnMinutes:warnMinutesInput.value,cells:{}};
+      document.querySelectorAll('.teacher-input').forEach(input=>{
+        const key=input.dataset.key;
+        const box=input.nextElementSibling;
+        saveData.cells[key]={name:input.value,lt:box.checked,start:state[key].start,running:state[key].running};
       });
-      localStorage.setItem('cabinState',JSON.stringify(obj));
+      localStorage.setItem('cabinState',JSON.stringify(saveData));
     }
-    function saveConfig(){
-      localStorage.setItem('cabinConfig',JSON.stringify({shiftDuration:shiftDurationInput.value,warnMinutes:warnMinutesInput.value}));
+
+    function loadState(){
+      const data=localStorage.getItem('cabinState');if(!data)return;
+      try{
+        const s=JSON.parse(data);
+        shiftDurationInput.value=s.shiftDuration||150;
+        warnMinutesInput.value=s.warnMinutes||10;
+        for(const key in s.cells){
+          const cell=s.cells[key];
+          const input=document.querySelector(`.teacher-input[data-key='${key}']`);
+          const box=input?.nextElementSibling;
+          const timer=document.querySelector(`td.timer[data-key='${key}']`);
+          if(input){input.value=cell.name||'';if(box)box.checked=cell.lt||false;if(box?.checked)input.classList.add('is-lt');}
+          if(cell.running&&cell.start){state[key].start=cell.start;state[key].running=true;startTimer(key);}
+          else if(timer)timer.textContent='00:00:00';
+        }
+      }catch(e){console.error(e);}
     }
+    loadState();
   </script>
 </body>
 </html>
