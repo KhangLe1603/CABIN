@@ -6,44 +6,54 @@
   <title>Quản lý CABIN</title>
   <style>
     :root{
-      --bg:#f7f7f9; --card:#ffffff; --muted:#666; --accent:#0b5fff;
-      --warning:#ffdddd; --danger:#ff6b6b; --green:#2ecc71; --border:#e0e0e5;
-      --cab-white:#ffffff; --cab-red:#ffecec;
+      --bg:#f7f7f9; --card:#ffffff; --muted:#555; --accent:#0b5fff;
+      --danger:#ff5a5a; --green:#2ecc71; --border:#dcdce0;
+      --cab-white:#ffffff; --cab-red:#fff3f3;
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
-    body{margin:0;background:var(--bg);color:#111}
-    .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:linear-gradient(90deg,#fff,#f8fbff);box-shadow:0 1px 0 var(--border)}
+
+    body{margin:0;background:var(--bg);color:#111;line-height:1.4;}
+    .topbar{display:flex;justify-content:space-between;align-items:center;
+      padding:12px 20px;background:#fff;border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:10;}
     .title{font-weight:700;font-size:18px}
     .clock{font-size:14px;color:var(--muted)}
-    .container{padding:18px}
-    .controls{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .container{padding:18px;max-width:100%;overflow-x:hidden;}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
     .controls label{font-size:13px;color:var(--muted)}
-    input[type=number]{width:84px;padding:6px;border:1px solid var(--border);border-radius:6px}
-    button{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
-    button.reset{background:#ff6b6b}
+    input[type=number]{width:80px;padding:6px 8px;border:1px solid var(--border);
+      border-radius:6px;font-size:13px;}
+    button{border:none;border-radius:6px;padding:8px 14px;color:#fff;font-size:13px;
+      cursor:pointer;font-weight:500;transition:0.2s;}
+    button:hover{opacity:0.9}
     button.apply{background:var(--green)}
-    table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(20,30,80,0.06)}
-    th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:center;font-size:13px}
-    thead th{background:#fbfdff;position:sticky;top:0;z-index:2}
-    .cab-row td:first-child{position:sticky;left:0;background:#fff;z-index:3;border-right:1px solid var(--border)}
-    .cab-name{font-weight:600}
-    .teacher-input{width:120px;padding:6px;border:1px solid var(--border);border-radius:6px;transition:0.2s}
-    .teacher-input.is-lt{border:2px solid var(--green)!important;background:#f6fff8}
-    .lt-check{margin-left:4px;width:16px;height:16px;cursor:pointer;vertical-align:middle}
-    .timer{min-width:64px;padding:6px;border-radius:6px}
-    .cab-white{background:var(--cab-white)}
-    .cab-red{background:#fff0f0}
-    .ending{background:var(--danger)!important;color:#fff}
-    tr.divider td{background:#f0f0f0;height:4px;border:0}
-    td,th{border-right:1px solid var(--border)}
-    tr td:last-child, tr th:last-child{border-right:none}
-    @media (max-width:900px){
-      .teacher-input{width:90px}
-      th,td{padding:6px;font-size:12px}
-      .controls{flex-direction:column;align-items:flex-start}
+    button.reset{background:var(--danger)}
+    .table-container{overflow-x:auto;border:1px solid var(--border);border-radius:10px;
+      background:var(--card);box-shadow:0 4px 12px rgba(0,0,0,0.04);}
+    table{width:max-content;min-width:100%;border-collapse:collapse;table-layout:fixed;}
+    th,td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);
+      text-align:center;padding:8px 6px;font-size:13px;white-space:nowrap;}
+    tr td:last-child, tr th:last-child{border-right:none;}
+    thead th{background:#f5f8ff;font-weight:600;position:sticky;top:0;z-index:5;}
+    .cab-row td:first-child{position:sticky;left:0;background:#fff;font-weight:600;
+      text-align:left;padding-left:10px;z-index:6;}
+    .teacher-input{width:120px;padding:5px 6px;border:1px solid var(--border);
+      border-radius:6px;font-size:13px;transition:0.2s;}
+    .teacher-input.is-lt{border:2px solid var(--green)!important;background:#f3fff6;}
+    .lt-check{width:18px;height:18px;cursor:pointer;}
+    .timer{font-family:monospace;font-size:13px;min-width:70px;border-radius:4px;padding:6px 4px;}
+    .cab-white{background:var(--cab-white);}
+    .cab-red{background:var(--cab-red);}
+    .ending{background:var(--danger)!important;color:#fff;}
+    tr.divider td{height:6px;border:0;background:#f0f0f0;}
+    @media(max-width:900px){
+      .teacher-input{width:90px;font-size:12px;}
+      th,td{font-size:12px;padding:6px 4px;}
+      .controls{flex-direction:column;align-items:flex-start;}
     }
   </style>
 </head>
+
 <body>
   <div class="topbar">
     <div class="title">Bảng quản lý CABIN</div>
@@ -61,7 +71,7 @@
       </div>
     </div>
 
-    <div style="overflow:auto">
+    <div class="table-container">
       <table id="cabTable">
         <thead>
           <tr>
@@ -75,61 +85,65 @@
 
   <script>
     const cabins = [];
-    for(let i=1;i<=11;i++) cabins.push({name:"CABIN "+i, color:'white'});
-    cabins.push({name:'CABIN 12', color:'red'});
-    cabins.push({name:'CABIN 13', color:'red'});
+    for (let i=1;i<=11;i++) cabins.push({name:"CABIN "+i,color:'white'});
+    cabins.push({name:'CABIN 12',color:'red'});
+    cabins.push({name:'CABIN 13',color:'red'});
 
-    const shifts = ['08:00','10:00','12:00','14:00','18:00'];
-    const state = {};
-    const table = document.getElementById('cabTable');
-    const tbody = table.querySelector('tbody');
-    const theadRow = table.querySelector('thead tr');
+    const shifts=['08:00','10:00','12:00','14:00','18:00'];
+    const state={};
+    const table=document.getElementById('cabTable');
+    const tbody=table.querySelector('tbody');
+    const theadRow=table.querySelector('thead tr');
+    const shiftDurationInput=document.getElementById('shiftDuration');
+    const warnMinutesInput=document.getElementById('warnMinutes');
+    const resetBtn=document.getElementById('resetBtn');
+    const applyBtn=document.getElementById('applyBtn');
 
-    const shiftDurationInput = document.getElementById('shiftDuration');
-    const warnMinutesInput = document.getElementById('warnMinutes');
-    const resetBtn = document.getElementById('resetBtn');
-    const applyBtn = document.getElementById('applyBtn');
-
+    // --- Tạo header ---
     shifts.forEach(shift=>{
       const th=document.createElement('th');
       th.colSpan=3;
-      th.innerHTML=`<div style="font-weight:700">${shift}</div><div style="font-size:12px;color:var(--muted)">Giáo viên / LT / Thời gian</div>`;
+      th.innerHTML=`<div>${shift}</div><small style="color:var(--muted);font-weight:400">Giáo viên / LT / Thời gian</small>`;
       theadRow.appendChild(th);
     });
 
+    // --- Tạo body ---
     cabins.forEach((c,i)=>{
       const tr=document.createElement('tr');
       tr.className='cab-row';
       const tdCab=document.createElement('td');
-      tdCab.innerHTML=`<div class="cab-name">${c.name}</div><div style="font-size:12px;color:var(--muted)">${c.color==='red'?'CABIN đỏ':'CABIN trắng'}</div>`;
-      tdCab.style.minWidth='140px';
+      tdCab.innerHTML=`<div>${c.name}</div><div style="font-size:12px;color:var(--muted)">${c.color==='red'?'CABIN đỏ':'CABIN trắng'}</div>`;
       tr.appendChild(tdCab);
 
       shifts.forEach((shift,j)=>{
         const key=`${i}-${j}`;
 
+        // 1️⃣ Ô nhập giáo viên
         const tdTeacher=document.createElement('td');
-        tdTeacher.style.width='170px';
         const input=document.createElement('input');
         input.className='teacher-input';
         input.placeholder='Tên giáo viên';
         input.dataset.key=key;
+        tdTeacher.appendChild(input);
+        tr.appendChild(tdTeacher);
 
+        // 2️⃣ Ô LT riêng
+        const tdLT=document.createElement('td');
         const ltBox=document.createElement('input');
         ltBox.type='checkbox';
         ltBox.className='lt-check';
         ltBox.title='LT';
+        tdLT.appendChild(ltBox);
+        tr.appendChild(tdLT);
 
-        tdTeacher.appendChild(input);
-        tdTeacher.appendChild(ltBox);
-        tr.appendChild(tdTeacher);
-
+        // 3️⃣ Ô Timer riêng
         const tdTimer=document.createElement('td');
         tdTimer.className='timer '+(c.color==='red'?'cab-red':'cab-white');
         tdTimer.dataset.key=key;
         tdTimer.textContent='00:00:00';
         tr.appendChild(tdTimer);
 
+        // State
         state[key]={start:null,intervalId:null,running:false};
 
         input.addEventListener('input',e=>{
@@ -148,7 +162,7 @@
 
       tbody.appendChild(tr);
 
-      if(i===10){ // sau cabin 11
+      if(i===10){ // chia nhóm
         const divider=document.createElement('tr');
         divider.className='divider';
         divider.innerHTML=`<td colspan="${1+shifts.length*3}"></td>`;
@@ -156,15 +170,21 @@
       }
     });
 
+    // --- Đồng hồ ---
     const clockEl=document.getElementById('clock');
     function updateClock(){
       const now=new Date();
-      clockEl.textContent=now.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'2-digit',day:'2-digit'})+
-      ' — '+now.toLocaleTimeString('vi-VN');
+      clockEl.textContent=
+        now.toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'2-digit',day:'2-digit'})+
+        ' — '+now.toLocaleTimeString('vi-VN');
     }
     setInterval(updateClock,1000);updateClock();
 
-    function formatHMS(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.floor(s%60);return[h,m,ss].map(v=>String(v).padStart(2,'0')).join(':');}
+    // --- Timer ---
+    function formatHMS(s){
+      const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.floor(s%60);
+      return[h,m,ss].map(v=>String(v).padStart(2,'0')).join(':');
+    }
 
     function startTimer(key){
       const entry=state[key];if(!entry||entry.running)return;
@@ -178,9 +198,14 @@
         const el=document.querySelector(`td.timer[data-key='${key}']`);
         if(el){
           el.textContent=formatHMS(elapsed);
-          if(remaining<=warnSec) el.classList.add('ending'); else el.classList.remove('ending');
+          if(remaining<=warnSec) el.classList.add('ending');
+          else el.classList.remove('ending');
         }
-        if(elapsed>=durSec){clearInterval(entry.intervalId);entry.intervalId=null;entry.running=false;}
+        if(elapsed>=durSec){
+          clearInterval(entry.intervalId);
+          entry.intervalId=null;
+          entry.running=false;
+        }
       };
       tick();
       entry.intervalId=setInterval(tick,1000);
@@ -208,12 +233,13 @@
       alert('Đã áp dụng thời lượng ca và cảnh báo cho các bộ đếm.');
     });
 
+    // --- Lưu / Tải ---
     function saveState(){
       const saveData={shiftDuration:shiftDurationInput.value,warnMinutes:warnMinutesInput.value,cells:{}};
       document.querySelectorAll('.teacher-input').forEach(input=>{
         const key=input.dataset.key;
-        const box=input.nextElementSibling;
-        saveData.cells[key]={name:input.value,lt:box.checked,start:state[key].start,running:state[key].running};
+        const box=input.closest('tr').querySelector(`.lt-check:nth-of-type(1)`);
+        saveData.cells[key]={name:input.value,lt:box?.checked,start:state[key].start,running:state[key].running};
       });
       localStorage.setItem('cabinState',JSON.stringify(saveData));
     }
@@ -227,11 +253,18 @@
         for(const key in s.cells){
           const cell=s.cells[key];
           const input=document.querySelector(`.teacher-input[data-key='${key}']`);
-          const box=input?.nextElementSibling;
           const timer=document.querySelector(`td.timer[data-key='${key}']`);
-          if(input){input.value=cell.name||'';if(box)box.checked=cell.lt||false;if(box?.checked)input.classList.add('is-lt');}
-          if(cell.running&&cell.start){state[key].start=cell.start;state[key].running=true;startTimer(key);}
-          else if(timer)timer.textContent='00:00:00';
+          const lt=document.querySelector(`.lt-check[data-key='${key}']`);
+          if(input){
+            input.value=cell.name||'';
+            const td=input.closest('td');
+            const box=td.nextElementSibling?.querySelector('.lt-check');
+            if(box){box.checked=cell.lt||false;}
+            if(box?.checked) input.classList.add('is-lt');
+          }
+          if(cell.running&&cell.start){
+            state[key].start=cell.start;state[key].running=true;startTimer(key);
+          }else if(timer)timer.textContent='00:00:00';
         }
       }catch(e){console.error(e);}
     }
